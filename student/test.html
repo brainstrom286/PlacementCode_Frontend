@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Test - PlacementCode</title>
+  <title>Test - Code7</title>
   <link rel="stylesheet" href="../css/style.css"/>
   <style>
     body { overflow: hidden; }
@@ -208,6 +208,10 @@
   let answered = {};
   let savedCode = {};
 
+  // ── Run rate limiting ──
+  let lastRunTime = 0;
+  const RUN_COOLDOWN_MS = 10000; // 10 seconds between runs
+
   // ── Fullscreen ──
   function enterFullscreen() {
     const el = document.documentElement;
@@ -405,6 +409,16 @@
     const code = document.getElementById('code-editor').value.trim();
     if (!code) return;
 
+    const now = Date.now();
+    const remaining = Math.ceil((RUN_COOLDOWN_MS - (now - lastRunTime)) / 1000);
+    if (now - lastRunTime < RUN_COOLDOWN_MS) {
+      const outputEl = document.getElementById('tab-output');
+      switchTab('output', document.getElementById('tab-btn-output'));
+      outputEl.innerHTML = `<div class="alert alert-warning" style="margin:0">Too many requests — please wait ${remaining}s before running again.</div>`;
+      return;
+    }
+    lastRunTime = now;
+
     const outputEl = document.getElementById('tab-output');
     const runBtn = document.getElementById('runBtn');
     outputEl.innerHTML = '<div class="running-msg"><span class="loader"></span> Running against sample test cases...</div>';
@@ -427,6 +441,14 @@
       outputEl.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
     } finally {
       runBtn.disabled = false;
+      // Show cooldown countdown on button
+      let cd = Math.ceil(RUN_COOLDOWN_MS / 1000);
+      runBtn.textContent = `▶ Run (${cd}s)`;
+      const cdInterval = setInterval(() => {
+        cd--;
+        if (cd <= 0) { clearInterval(cdInterval); runBtn.textContent = '▶ Run'; }
+        else runBtn.textContent = `▶ Run (${cd}s)`;
+      }, 1000);
     }
   }
 
